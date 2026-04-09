@@ -1,6 +1,4 @@
-/*Using income, age, and spending behavior, can you identify distinct customer groups? What are the defining
-characteristics of each segment?*/
-SELECT SUM(TotalSpent) FROM marketing_campaign_table
+/*DATA CLEANING*/
 ALTER TABLE marketing_campaign_table
 ADD Age tinyint;
 
@@ -58,6 +56,15 @@ SET IncomeCategory = CASE
 	ELSE 'No Income Specified'
 END; 
 
+ALTER TABLE marketing_campaign_table
+ADD SpendingFrequency tinyint;
+
+UPDATE marketing_campaign_table
+SET SpendingFrequency = NumWebPurchases + NumStorePurchases + NumCatalogPurchases;
+
+
+/*Using income, age, and spending behavior, can you identify distinct customer groups? What are the defining
+characteristics of each segment?*/
 GO
 CREATE VIEW [vw_customer_segment_profile] AS
 SELECT IncomeCategory, Generation, COUNT(*) AS CustomerCount, AVG(TotalSpent) AS AvgTotalSpent, AVG(Income) AS AvgIncome
@@ -77,7 +84,6 @@ FROM marketing_campaign_table
 GROUP BY IncomeCategory, Generation, Marital_Status;
 
 
-
 /*Which customer segments responded most positively to past campaigns? Is there a pattern across income level,
 marital status, or education?*/
 GO
@@ -86,7 +92,6 @@ SELECT IncomeCategory, Marital_Status,
 SUM (CAST(AcceptedCmp1 AS INT) + CAST(AcceptedCmp2 AS INT) + CAST(AcceptedCmp3 AS INT) + CAST(AcceptedCmp4 AS INT) + CAST(AcceptedCmp5 AS INT) + CAST(Response AS INT)) AS TotalAcceptance
 FROM marketing_campaign_table
 GROUP BY IncomeCategory, Marital_Status;
-
 
 GO
 CREATE VIEW [vw_campaign_response_by_income_education] AS
@@ -125,7 +130,6 @@ SELECT PreferredChannel, SUM(TotalSpent) AS TotalSpent
 FROM purchase_channels
 GROUP BY PreferredChannel
 
-
 GO
 CREATE VIEW [vw_channel_preference_by_income] AS
 WITH purchase_channels AS (SELECT IncomeCategory, SUM(TotalSpent) AS TotalSpent, SUM(NumWebPurchases) AS WebP_Count, SUM(NumStorePurchases) AS StoreP_Count, SUM(NumCatalogPurchases) AS CatalogP_Count,
@@ -146,12 +150,6 @@ GROUP BY IncomeCategory
 
 /*How recently and how frequently do high-value customers purchase? Can you classify customers into RFM tiers (e.g.
 Champions, At-Risk, Lost)?*/
-ALTER TABLE marketing_campaign_table
-ADD SpendingFrequency tinyint;
-
-UPDATE marketing_campaign_table
-SET SpendingFrequency = NumWebPurchases + NumStorePurchases + NumCatalogPurchases;
-
 GO
 CREATE VIEW [vw_rfm_recency_frequency_highspend] AS
 WITH rfm_catogories AS(SELECT IncomeCategory,
@@ -179,7 +177,6 @@ SUM(CASE WHEN SpendingFrequency = 'Low Frequency' THEN 1 ELSE 0 END) AS LowFrequ
 FROM rfm_catogories
 WHERE (TotalSpent = 'High TotalSpent' AND IncomeCategory = 'High Income') OR (TotalSpent = 'High TotalSpent' AND IncomeCategory = 'Medium Income') OR (TotalSpent = 'High TotalSpent' AND IncomeCategory = 'Low Income')
 GROUP BY TotalSpent, IncomeCategory
-
 
 GO
 CREATE VIEW [vw_rfm_tiers_total_spent] AS
@@ -226,6 +223,7 @@ SELECT RFM_Tiers, TotalSpent, SUM((CASE WHEN RFM_Tiers = 'Champions' THEN 1 ELSE
 FROM rfm_count
 GROUP BY RFM_Tiers, TotalSpent
 
+
 /*Which product categories (wines, meats, gold, etc.) drive the most spend? Are there cross-sell opportunities visible in
 the data?*/
 GO 
@@ -240,8 +238,6 @@ SELECT IncomeCategory,
 	
 FROM marketing_campaign_table
 GROUP BY IncomeCategory;
-
-
 
 
 /*Do customers who have complained in the last 2 years show lower campaign response rates? What does this imply
